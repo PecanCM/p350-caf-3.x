@@ -170,7 +170,8 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 				  -e s/s390x/s390/ -e s/parisc64/parisc/ \
 				  -e s/ppc.*/powerpc/ -e s/mips.*/mips/ \
 				  -e s/sh[234].*/sh/ )
-
+# LGE_CHANGES [junyeong.han@lge.com] 2010-01-04, set sub arch as arm
+SUBARCH := arm
 # Cross compiling and selecting different set of gcc/bin-utils
 # ---------------------------------------------------------------------------
 #
@@ -349,8 +350,9 @@ CHECK		= sparse
 # warnings and causes the build to stop upon encountering them.
 CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
+LGE_CF    = -D__CHECK_ENDIAN__ -Wcast-truncate -Wno-paren-string -Wtypesign
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
-		  -Wbitwise -Wno-return-void $(CF)
+		  -Wbitwise -Wno-return-void $(CF) $(LGE_CF)
 CFLAGS_MODULE   =
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
@@ -661,6 +663,13 @@ ifneq ($(KCFLAGS),)
         $(call warn-assign,CFLAGS)
         KBUILD_CFLAGS += $(KCFLAGS)
 endif
+
+#LGE_CHANGE_S, [Data_Patch_GB_US_65] for operator/country checking by d3sw1-data@lge.com
+ifeq (E0TRF, $(TARGET_CARRIER))
+KBUILD_CFLAGS   += -DLGE_TRACFONE_US
+endif
+#LGE_CHANGE_E, [Data_Patch_GB_US_65] for operator/country checking by d3sw1-data@lge.com
+
 
 # Use --build-id when available.
 LDFLAGS_BUILD_ID = $(patsubst -Wl$(comma)%,%,\
