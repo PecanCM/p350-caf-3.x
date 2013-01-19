@@ -10,7 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#if !defined (__ASM_ARCH_MSM_BOARD_LGE_H)
+#ifndef __ASM_ARCH_MSM_BOARD_LGE_H
 #define __ASM_ARCH_MSM_BOARD_LGE_H
 
 #include <linux/types.h>
@@ -19,6 +19,7 @@
 #include <linux/i2c-gpio.h>
 #include <linux/rfkill.h>
 #include <linux/platform_device.h>
+#include <linux/backlight.h>
 #include <asm/setup.h>
 
 #if __GNUC__
@@ -31,49 +32,35 @@
  * 2010-03-03, cleaneye.kim@lge.com
  */
 #define MSM7X27_EBI1_CS0_BASE	PHYS_OFFSET
+#ifdef CONFIG_MACH_MSM7X27_SWIFT
+#define LGE_RAM_CONSOLE_SIZE    (128 * SZ_1K)
+#else
 #define LGE_RAM_CONSOLE_SIZE    (128 * SZ_1K * 2)
+#endif
 #endif
 
 /* define PMEM address size */
-#ifdef CONFIG_ARCH_MSM7X25
-#define MSM_PMEM_MDP_SIZE   0xb21000
-#define MSM_PMEM_ADSP_SIZE  0x97b000
-#define MSM_PMEM_AUDIO_SIZE 0x121000
-#define MSM_FB_SIZE     0x200000
-#define PMEM_KERNEL_EBI1_SIZE   0x64000
-#endif
-
 #ifdef CONFIG_ARCH_MSM7X27
-#define MSM_PMEM_MDP_SIZE	0x1B76000
+#if defined(CONFIG_MACH_MSM7X27_PECAN)
+#define MSM_PMEM_MDP_SIZE	0x1076000 /* 23->12MB + 4.46 MB */
+#define MSM_FB_SIZE		0x50000
 #define MSM_PMEM_ADSP_SIZE	0xB71000
 #define MSM_PMEM_AUDIO_SIZE	0x5B000
-#define MSM_FB_SIZE		0x177000
-#define PMEM_KERNEL_EBI1_SIZE	0x1C000
-#if defined(CONFIG_MACH_MSM7X27_PECAN)
 #define MSM_GPU_PHYS_SIZE	SZ_2M
-#endif
-#endif
-
-/* Using lower 1MB of OEMSBL memory for GPU_PHYS */
-#if defined(CONFIG_MACH_MSM7X27_PECAN)
-#define MSM_GPU_PHYS_START_ADDR  0x240000ul
+#define PMEM_KERNEL_EBI1_SIZE	0x1C000
+#define HIDDEN_RESET_FB_SIZE (256*320*2)
 #else
-#define MSM_GPU_PHYS_START_ADDR	 0xD600000ul
-#endif
-
-/* Using upper 1/2MB of Apps Bootloader memory*/
-#define MSM_PMEM_AUDIO_START_ADDR	0x80000ul
-
-/* TA charger */
-#define GISELE_TA_CHG_CURRENT	600
-#define GISELE_USB_CHG_CURRENT	400
-
-#if defined (CONFIG_MACH_MSM7X27_MUSCAT) || defined (CONFIG_MACH_MSM7X27_PECAN)
-/* I dont know why I allocate bigger than real lcd size in muscat , because EBI2 interface? */
-#define HIDDEN_RESET_FB_SIZE (320*256*2)
-#else
+//#define MSM_PMEM_MDP_SIZE	0x1700000
+#define MSM_PMEM_ADSP_SIZE	0xAE4000
+#define MSM_PMEM_MDP_SIZE	0xC3D000
+//#define MSM_PMEM_ADSP_SIZE	0x8DE000
+#define MSM_FB_SIZE		0xB6000
+#define MSM_PMEM_AUDIO_SIZE	0x5B000
+#define PMEM_KERNEL_EBI1_SIZE	0x1C000
 #define HIDDEN_RESET_FB_SIZE (320*480*2)
 #endif
+#endif
+
 /* board revision information */
 enum {
 	EVB         = 0,
@@ -102,6 +89,41 @@ struct gpio_i2c_pin {
 };
 
 /* touch screen platform data */
+//LGE_DEV_PORTING UNIVA_S
+// [LGE PATCH : START] edward1.kim@lge.com 20110214  
+#if 1
+#if defined(CONFIG_TOUCHSCREEN_MCS6000_TA) || defined(CONFIG_TOUCHSCREEN_MCS6000_ROQU)
+/* touch screen platform data */
+struct touch_platform_data {
+	int ts_x_min;
+	int ts_x_max;
+	int ts_y_min;
+	int ts_y_max;
+	int (*power)(unsigned char onoff);
+	int (*pulldown)(int onoff);
+	int irq;
+	int scl;
+	int sda;
+};
+#else
+struct touch_platform_data {
+	int ts_x_min;
+	int ts_x_max;
+	int ts_y_min;
+	int ts_y_max;
+	int ts_y_start;
+	int ts_y_scrn_max;
+	int (*power)(unsigned char onoff);
+	int irq;
+	int gpio_int;// [LGE PATCH] edward1.kim@lge.com 20110214  
+	int hw_i2c;
+	int scl;
+	int sda;
+	int ce;
+	int touch_key;
+};
+#endif
+#else
 struct touch_platform_data {
 	int ts_x_min;
 	int ts_x_max;
@@ -112,7 +134,9 @@ struct touch_platform_data {
 	int scl;
 	int sda;
 };
-
+#endif
+// [LGE PATCH : END] edward1.kim@lge.com 20110214
+//LGE_DEV_PORTING UNIVA_E  
 /* pp2106 qwerty platform data */
 struct pp2106_platform_data {
 	unsigned int reset_pin;
@@ -190,6 +214,7 @@ struct k3dh_platform_data {
 	int (*power_off)(void);
 	int (*gpio_config)(int config);
 };
+
 struct kr3dh_platform_data {
 	int poll_interval;
 	int min_interval;
@@ -204,9 +229,6 @@ struct kr3dh_platform_data {
 	u8 negate_y;
 	u8 negate_z;
 
-#if defined(CONFIG_MACH_MSM7X27_PECAN)
-	int irq_pin;
-#endif
 	int (*kr_init)(void);
 	void (*kr_exit)(void);
 	int (*power_on)(void);
@@ -292,10 +314,16 @@ int aat28xx_ldo_enable(struct device *dev, unsigned num, unsigned enable);
 int aat28xx_ldo_set_level(struct device *dev, unsigned num, unsigned vol);
 void aat28xx_power(struct device *dev, int on);
 
-/* rt9393 backlight */
-struct rt9393_platform_data {
-	int gpio_en;
+//LGE_DEV_PORTING UNIVA_S
+struct lm3530_platform_data {
+	void (*platform_init)(void);
+	int gpio;
+	unsigned int mode;		     /* initial mode */
+	int max_current;			 /* led max current(0-7F) */
+	int init_on_boot;			 /* flag which initialize on system boot */
+	int version;				 /* Chip version number */
 };
+//LGE_DEV_PORTING UNIVA_E
 
 /* LCD panel */
 struct msm_panel_lgit_pdata {
@@ -324,6 +352,23 @@ struct msm_panel_hitachi_pdata {
 	int maker_id;
 };
 
+
+
+// LGE_DEV_PORTING UNIVA_S [ks82.jung@lge.com]
+/* Define new structure named 'msm_panel_ldp_pdata' */
+#define PANEL_ID_AUO      0
+#define PANEL_ID_LDP      1
+struct msm_panel_ldp_pdata {
+	int gpio;
+	int (*backlight_level)(int level, int max, int min);
+	int (*pmic_backlight)(int level);
+	int (*panel_num)(void);
+	void (*panel_config_gpio)(int);
+	int initialized;
+	int maker_id;
+};
+// LGE_DEV_PORTING UNIVA_E [ks82.jung@lge.com]
+
 struct msm_panel_ilitek_pdata {
 	int gpio;
 	int initialized;
@@ -340,6 +385,12 @@ struct msm_panel_novatek_pdata {
 	int *gpio_num;
 	int initialized;
 };
+
+struct msm_panel_samsung_pdata {
+	int gpio;
+	int (*pmic_backlight)(struct backlight_device *);
+};
+
 
 /* tsc2007 platform data */
 struct tsc2007_platform_data {
@@ -381,6 +432,9 @@ struct lge_panic_handler_platform_data {
 	int (*reboot_key_detect)(void);
 };
 
+void __init msm_msm7x2x_allocate_memory_regions(void);
+void __init msm7x27_reserve(void);
+
 struct ram_console_buffer *get_ram_console_buffer(void);
 void lge_set_reboot_reason(unsigned int reason);
 int lge_gpio_switch_pass_event(char *sdev_name, int state);
@@ -393,7 +447,7 @@ unsigned lge_get_pcb_version(void);
 unsigned lge_get_chg_curr_volt(void);
 unsigned lge_get_batt_therm(void);
 unsigned lge_get_batt_volt_raw(void);
-#ifdef CONFIG_MACH_MSM7X27_GELATO
+#ifdef CONFIG_MACH_MSM7X27_UNIVA
 unsigned lge_get_chg_stat_reg(void);
 unsigned lge_get_chg_en_reg(void);
 unsigned lge_set_elt_test(void);
@@ -403,6 +457,8 @@ unsigned lge_get_nv_qem(void);
 
 #define CAMERA_POWER_ON				0
 #define CAMERA_POWER_OFF			1
+
+unsigned lge_get_cable_info(void);
 
 typedef void (gpio_i2c_init_func_t)(int bus_num);
 int __init init_gpio_i2c_pin(struct i2c_gpio_platform_data *i2c_adap_pdata,
@@ -425,6 +481,7 @@ void __init lge_add_input_devices(void);
 void __init lge_add_lcd_devices(void);
 void __init lge_add_btpower_devices(void);
 void __init lge_add_mmc_devices(void);
+void __init lge_add_wlan_devices(void);
 void __init lge_add_misc_devices(void);
 void __init lge_add_gpio_i2c_device(gpio_i2c_init_func_t *init_func);
 void __init lge_add_gpio_i2c_devices(void);

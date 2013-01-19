@@ -23,7 +23,11 @@
 #include <linux/input.h>
 
 #define DRIVER_NAME "ats_input"
-
+// ADD 0010583: [ETA/MTC] ETA Capture, Key, Touch, Logging / MTC Key, Logging 		
+#if 0
+extern int touch_get_x_max (void);
+extern int touch_get_y_max(void);
+#endif  
 static struct input_dev *ats_input_dev;
 
 /* add interface get ATS_INPUT_DEVICE [younchan.kim, 2010-06-11] */
@@ -32,7 +36,9 @@ struct input_dev *get_ats_input_dev(void)
 	return ats_input_dev;
 }
 EXPORT_SYMBOL(get_ats_input_dev);
-static int  __init ats_input_probe(struct platform_device *pdev)
+
+
+static int __devinit ats_input_probe(struct platform_device *pdev)
 {
 	int rc = 0;
 	int i;
@@ -56,9 +62,11 @@ static int  __init ats_input_probe(struct platform_device *pdev)
 		printk(KERN_ERR"%s : input_register_device failed\n", __func__);
 
 	/* FIXME: Touch resolution should be given by platform data */
-	input_set_abs_params(ats_input_dev, ABS_MT_POSITION_X, 0, 320, 0, 0);
-	input_set_abs_params(ats_input_dev, ABS_MT_POSITION_Y, 0, 480, 0, 0);
-
+// MOD 0010583: [ETA/MTC] ETA Capture, Key, Touch, Logging / MTC Key, Logging  
+#if 0
+	input_set_abs_params(ats_input_dev, ABS_MT_POSITION_X, 0, touch_get_x_max(), 0, 0);
+	input_set_abs_params(ats_input_dev, ABS_MT_POSITION_Y, 0, touch_get_y_max(), 0, 0);
+#endif 
 	return rc;
 }
 
@@ -68,17 +76,18 @@ static int ats_input_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver __refdata ats_input_driver = {
+static struct platform_driver ats_input_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
 	},
+	.probe	 = ats_input_probe,
 	.remove = ats_input_remove,
 };
 
 static int __init ats_input_init(void)
 {
-	return platform_drvier_probe(&ats_input_driver, ats_input_probe);
+	return platform_driver_register(&ats_input_driver);
 }
 
 
